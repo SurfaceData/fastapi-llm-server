@@ -1,11 +1,16 @@
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.10
+FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
+
+# Ensure the libcuda* libraries are available.
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/lib
+
+WORKDIR /app
 
 # Copy over source code.
 COPY ./requirements.txt /app/requirements.txt
 
 # Install all requirements.
-RUN --mount=type=cache,target=/root/.cache/pip pip \
-  install --no-cache-dir --upgrade -r /app/requirements.txt
+RUN --mount=type=cache,target=/root/.cache \
+  pip install -r /app/requirements.txt
 
 # Copy over the service files.
 COPY ./main.py /app/main.py
@@ -18,4 +23,5 @@ COPY ./prestart.sh /app/prestart.sh
 ENV PORT 8080
 EXPOSE 8080
 
-# Uvicorn will do the rest automatically.
+# Run!
+CMD ["uvicorn", "main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "8080"]
