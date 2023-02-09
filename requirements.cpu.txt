@@ -1,0 +1,9 @@
+loguru==0.6.0
+fastapi==0.88.0
+prometheus-client==0.15.0
+pydantic==1.9.1
+python-dotenv==0.21.0
+starlette_exporter==0.4.0
+torch==1.13.1
+transformers==4.26.0
+uvicorn==0.20.0

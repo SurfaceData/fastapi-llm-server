@@ -1,5 +1,6 @@
 from pydantic import BaseSettings
 from torch import cuda
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -7,6 +8,7 @@ class Settings(BaseSettings):
     DEVICE: str = "cuda" if cuda.is_available() else "cpu"
     USE_GPU: bool = cuda.is_available()
     MODEL: str = "EleutherAI/gpt-neo-2.7B"
+    MODEL_CACHE_DIR: Optional[str] = None
 
     class Config:
         env_file = ".env"
