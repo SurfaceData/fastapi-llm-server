@@ -3,6 +3,7 @@ from prometheus_client import Histogram
 from pydantic import BaseModel
 from typing import List
 
+from llm_server.config import settings
 from llm_server.generator import model, tokenizer
 
 router = APIRouter()
@@ -16,7 +17,7 @@ class GenerateResult(BaseModel):
 
 @router.get("/generate")
 def generate(prompt: str) -> List[GenerateResult]:
-    tokenized_input = tokenizer(prompt, return_tensors="pt").to("cuda")
+    tokenized_input = tokenizer(prompt, return_tensors="pt").to(settings.DEVICE)
     with GENERATE_TIME.time():
         outputs = model.generate(**tokenized_input)
     results = tokenizer.batch_decode(outputs)
