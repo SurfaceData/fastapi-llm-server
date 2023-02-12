@@ -11,14 +11,21 @@ router = APIRouter()
 GENERATE_TIME = Histogram("generate_time", "Time spent generating prompt completions")
 
 
+class GenerateRequest(BaseModel):
+    prompt: str
+    n: int = 1
+
+
 class GenerateResult(BaseModel):
     completion: str
 
 
-@router.get("/generate")
-def generate(prompt: str) -> List[GenerateResult]:
-    tokenized_input = tokenizer(prompt, return_tensors="pt").to(settings.DEVICE)
+@router.post("/generate")
+def generate(request: GenerateRequest) -> List[GenerateResult]:
+    tokenized_input = tokenizer(request.prompt, return_tensors="pt").to(settings.DEVICE)
     with GENERATE_TIME.time():
-        outputs = model.generate(**tokenized_input)
+        outputs = model.generate(
+            **tokenized_input, num_beams=request.n, num_return_sequences=request.n
+        )
     results = tokenizer.batch_decode(outputs)
     return [GenerateResult(completion=result) for result in results]
