@@ -1,16 +1,15 @@
+import torch
+
 from loguru import logger
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import pipeline
 
 from llm_server.config import settings
 
-logger.info("Loading tokenizer")
-tokenizer = AutoTokenizer.from_pretrained(
-    settings.MODEL, cache_dir=settings.MODEL_CACHE_DIR
-)
-logger.info(f"Loading model on {settings.DEVICE}, GPU: {settings.USE_GPU}")
-model = AutoModelForCausalLM.from_pretrained(
-    settings.MODEL,
-    device_map="auto" if settings.USE_GPU else None,
-    load_in_8bit=settings.USE_GPU,
-    cache_dir=settings.MODEL_CACHE_DIR,
+logger.info(f"Loading {settings.MODEL} on {settings.DEVICE}, GPU: {settings.USE_GPU}")
+generator = pipeline(
+    settings.MODEL_TYPE,
+    model=settings.MODEL,
+    tokenizer=settings.MODEL,
+    device=settings.DEVICE,
+    use_auth_token=settings.AUTH_TOKEN,
 )

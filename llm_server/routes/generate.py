@@ -1,10 +1,10 @@
 from fastapi import APIRouter
+from loguru import logger
 from prometheus_client import Histogram
 from pydantic import BaseModel
 from typing import List
-
 from llm_server.config import settings
-from llm_server.generator import model, tokenizer
+from llm_server.generator import generator
 
 router = APIRouter()
 
@@ -13,6 +13,7 @@ GENERATE_TIME = Histogram("generate_time", "Time spent generating prompt complet
 
 class GenerateRequest(BaseModel):
     prompt: str
+    max_new_tokens: int = 128
     n: int = 1
 
 
@@ -22,11 +23,7 @@ class GenerateResult(BaseModel):
 
 @router.post("/generate")
 def generate(request: GenerateRequest) -> List[GenerateResult]:
-    tokenized_input = tokenizer(request.prompt, return_tensors="pt").to(settings.DEVICE)
+    logger.info(f"generate: {request.prompt}")
     with GENERATE_TIME.time():
-        outputs = model.generate(
-            **tokenized_input, num_beams=request.n, num_return_sequences=request.n
-        )
-    input_ids = tokenized_input["input_ids"]
-    results = tokenizer.batch_decode(outputs[:, input_ids.shape[1] :])
-    return [GenerateResult(completion=result) for result in results]
+        results = generator(request.prompt, max_length=request.max_new_tokens)
+    return [GenerateResult(completion=result["generated_text"]) for result in results]
