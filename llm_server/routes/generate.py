@@ -4,7 +4,7 @@ from prometheus_client import Histogram
 from pydantic import BaseModel
 from typing import List
 from llm_server.config import settings
-from llm_server.generator import generator
+from llm_server.generator import model, tokenizer  # generator
 
 router = APIRouter()
 
@@ -29,9 +29,16 @@ class GenerateResult(BaseModel):
 @router.post("/generate")
 def generate(request: GenerateRequest) -> List[GenerateResult]:
     logger.info(f"generate: {request.prompt}")
+    tokenized_input = tokenizer(request.prompt, return_tensors="pt").to(settings.DEVICE)
+    answer = "The answer is:"
+    tokenized_input["decoder_input_ids"] = (
+        tokenizer(answer, return_tensors="pt").to(settings.DEVICE).input_ids
+    )
+    print(tokenized_input)
     with GENERATE_TIME.time():
-        results = generator(request.prompt, max_length=request.max_new_tokens)
-    return [GenerateResult(completion=result["generated_text"]) for result in results]
+        outputs = model(**tokenized_input)
+        results = tokenizer.batch_decode(outputs)
+    return [GenerateResult(completion=result) for result in results]
 
 
 @router.post("/generate-batch")
