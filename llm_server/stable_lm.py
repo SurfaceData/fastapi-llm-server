@@ -49,15 +49,15 @@ def create_stablelm_model():
 
     def get_prompt(ctx: Union[str, PromptedConversation]) -> str:
         if isinstance(ctx, str):
-            return template.render(
-                PromptedConversation(
-                    system_prompt=DEFAULT_SYSTEM_PROMPT,
-                    messages=[Message(source=MessageSource.user, content=ctx)],
-                )
+            conversation = PromptedConversation(
+                system_prompt=DEFAULT_SYSTEM_PROMPT,
+                messages=[Message(source=MessageSource.user, content=ctx)],
             )
+        else:
+            conversation = ctx
         return template.render(
             {
-                "conversation": ctx,
+                "conversation": conversation,
                 "default_system_prompt": DEFAULT_SYSTEM_PROMPT,
             }
         )
