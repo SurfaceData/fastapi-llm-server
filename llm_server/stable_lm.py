@@ -30,9 +30,9 @@ def create_stablelm_model():
     )
     model.half().to(settings.DEVICE)
 
-    raw_template = """{{ system_prompt }}
-{% for message in messages %}
-{% if message.message_source == "assistant" %}<|ASSISTANT|>{{ message.content }}{% elif message.message_source == "user" %}<|USER|>{{ message.content }}{% endif %}{% endfor %}
+    raw_template = """{% if conversation.system_prompt is not none %}{{ conversation.system_prompt }}{% else %}{{ default_system_prompt }}{% endif %}
+{% for message in conversation.messages %}
+{% if message.source == "assistant" %}<|ASSISTANT|>{{ message.content }}{% elif message.source == "user" %}<|USER|>{{ message.content }}{% endif %}{% endfor %}
 <|ASSISTANT|>
 """
     template = Template(raw_template)
@@ -52,10 +52,15 @@ def create_stablelm_model():
             return template.render(
                 PromptedConversation(
                     system_prompt=DEFAULT_SYSTEM_PROMPT,
-                    messages=[Message(message_source=MessageSource.user, content=ctx)],
+                    messages=[Message(source=MessageSource.user, content=ctx)],
                 )
             )
-        return template.render(ctx)
+        return template.render(
+            {
+                "conversation": ctx,
+                "default_system_prompt": DEFAULT_SYSTEM_PROMPT,
+            }
+        )
 
     def generator(ctx: Union[str, PromptedConversation], max_length):
         prompt = get_prompt(ctx)

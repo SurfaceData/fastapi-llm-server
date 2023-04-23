@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel
-from typing import List
+from typing import List, Union
 
 
 class MessageSource(str, Enum):
@@ -9,10 +9,10 @@ class MessageSource(str, Enum):
 
 
 class Message(BaseModel):
-    message_source: MessageSource
+    source: MessageSource
     content: str
 
 
 class PromptedConversation(BaseModel):
-    system_prompt: str = ""
+    system_prompt: Union[str, None] = None
     messages: List[Message]
