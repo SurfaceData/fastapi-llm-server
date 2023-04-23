@@ -4,7 +4,6 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    AUTH_TOKEN: Optional[str] = None
     DEVICE: Optional[int] = 0 if cuda.is_available() else None
     USE_GPU: bool = cuda.is_available()
     MODEL: str = "EleutherAI/gpt-neo-2.7B"
