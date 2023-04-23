@@ -17,11 +17,6 @@ class GenerateRequest(BaseModel):
     n: int = 1
 
 
-class BatchGenerateRequest(BaseModel):
-    prompt: List[str]
-    max_new_tokens: int = 128
-
-
 class GenerateResult(BaseModel):
     completion: str
 
@@ -29,13 +24,6 @@ class GenerateResult(BaseModel):
 @router.post("/generate")
 def generate(request: GenerateRequest) -> List[GenerateResult]:
     logger.info(f"generate: {request.prompt}")
-    with GENERATE_TIME.time():
-        results = generator(request.prompt, max_length=request.max_new_tokens)
-    return [GenerateResult(completion=result["generated_text"]) for result in results]
-
-
-@router.post("/generate-batch")
-def generate_batch(request: BatchGenerateRequest) -> List[GenerateResult]:
     with GENERATE_TIME.time():
         results = generator(request.prompt, max_length=request.max_new_tokens)
     return [GenerateResult(completion=result["generated_text"]) for result in results]
