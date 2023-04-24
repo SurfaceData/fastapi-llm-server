@@ -4,7 +4,7 @@ from typing import List, Union
 
 
 class MessageSource(str, Enum):
-    system = "system"
+    assistant = "assistant"
     user = "user"
 
 
