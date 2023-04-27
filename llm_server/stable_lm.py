@@ -1,6 +1,7 @@
 import torch
 
 from jinja2 import Template
+from pydantic import BaseModel
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -12,13 +13,43 @@ from typing import Union
 from llm_server.config import settings
 from llm_server.structs import Message, MessageSource, PromptedConversation
 
+STABLE_LLM_RAW_TEMPLATE = """{% if conversation.system_prompt is not none %}{{ conversation.system_prompt }}{% else %}{{ default_system_prompt }}{% endif %}
+{% for message in conversation.messages %}
+{% if message.source == "assistant" %}<|ASSISTANT|>{{ message.content }}{% elif message.source == "user" %}<|USER|>{{ message.content }}{% endif %}{% endfor %}
+<|ASSISTANT|>
+"""
 
-DEFAULT_SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
+STABLE_LLM_DEFAULT_SYSTEM_PROMPT = """<|SYSTEM|># StableLM Tuned (Alpha version)
 	- StableLM is a helpful and harmless open-source AI language model developed by StabilityAI.
 	- StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.
 	- StableLM is more than just an information source, StableLM is also able to write poetry, short stories, and make jokes.
 	- StableLM will refuse to participate in anything that could harm a human.
 	"""
+
+OPEN_ASSISTANT_RAW_TEMPLATE = """{% if conversation.system_prompt is not none %}{{ conversation.system_prompt }}{% else %}{{ default_system_prompt }}{% endif %}
+{% for message in conversation.messages %}
+{% if message.source == "assistant" %}<|assistant|>{{ message.content }}<|endoftext|>{% elif message.source == "user" %}<|assistant|>{{ message.content }}<|endoftext|>{% endif %}{% endfor %}
+<|assistant|>
+"""
+
+OPEN_ASSISTANT_DEFAULT_SYSTEM_PROMPT = """"""
+
+
+class PromptTemplate(BaseModel):
+    raw: str
+    default_system_prompt: str
+
+
+MODEL_PROMPT_TEMPLATES = {
+    "stabilityai/stablelm-tuned-alpha-7b": PromptTemplate(
+        raw=STABLE_LLM_RAW_TEMPLATE,
+        default_system_prompt=STABLE_LLM_DEFAULT_SYSTEM_PROMPT,
+    ),
+    "OpenAssistant/stablelm-7b-sft-v7-epoch-3": PromptTemplate(
+        raw=OPEN_ASSISTANT_RAW_TEMPLATE,
+        default_system_prompt=OPEN_ASSISTANT_DEFAULT_SYSTEM_PROMPT,
+    ),
+}
 
 
 def create_stablelm_model():
@@ -30,12 +61,8 @@ def create_stablelm_model():
     )
     model.half().to(settings.DEVICE)
 
-    raw_template = """{% if conversation.system_prompt is not none %}{{ conversation.system_prompt }}{% else %}{{ default_system_prompt }}{% endif %}
-{% for message in conversation.messages %}
-{% if message.source == "assistant" %}<|ASSISTANT|>{{ message.content }}{% elif message.source == "user" %}<|USER|>{{ message.content }}{% endif %}{% endfor %}
-<|ASSISTANT|>
-"""
-    template = Template(raw_template)
+    prompt_template = MODEL_PROMPT_TEMPLATES[settings.MODEL]
+    template = Template(prompt_template.raw)
 
     class StopOnTokens(StoppingCriteria):
         def __call__(
@@ -50,7 +77,7 @@ def create_stablelm_model():
     def get_prompt(ctx: Union[str, PromptedConversation]) -> str:
         if isinstance(ctx, str):
             conversation = PromptedConversation(
-                system_prompt=DEFAULT_SYSTEM_PROMPT,
+                system_prompt=prompt_template.default_system_prompt,
                 messages=[Message(source=MessageSource.user, content=ctx)],
             )
         else:
@@ -58,7 +85,7 @@ def create_stablelm_model():
         return template.render(
             {
                 "conversation": conversation,
-                "default_system_prompt": DEFAULT_SYSTEM_PROMPT,
+                "default_system_prompt": prompt_template.default_system_prompt,
             }
         )
 
